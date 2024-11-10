@@ -15,12 +15,13 @@ the URL is reused to search for the titles.
 needed in the future.
 '''
 
-URL = "https://www.imdb.com/"
-SEARCH_PREFIX = "find/?q="
+URL = "https://www.imdb.com"
+SEARCH_PREFIX = "/find/?q="
 USER_INPUT = None
 SEARCH_SUFIX = "&ref_=nv_sr_sm"
 WEBSITE_LIST_CLASS = "ipc-metadata-list-summary-item__t"
 DRIVER = webdriver.Firefox()
+
 '''
     In this array the movie links are stored for future use after being scaped 
 from the initial search page
@@ -59,7 +60,7 @@ it will tell the driver to open the webpage and start the process.
     Third it will iterate trough the movies list links. 
 '''
 def goToPage():
-    userInput = input("\nWhat would you want to scrape today from " + URL)
+    userInput = input("\nWhat would you want to scrape today from " + URL + "/")
     print('\n Commencing search for "' + userInput + '".')
     
     site = URL + SEARCH_PREFIX + userInput + SEARCH_SUFIX
@@ -88,11 +89,9 @@ def getAllMovies():
     moreMovies = "/html/body/div[2]/main/div[2]/div[3]/section/div/div[1]/section[2]/div[2]/div/span/button"
     moreMoviesButton = DRIVER.find_element("xpath", moreMovies)
     
-    # DRIVER.execute_script("arguments[0].scrollIntoView(true);", moreMoviesButton)
-    # time.sleep(randomSleep())
-    # moreMoviesButton.click()
-
-    # titlesXPath="/html/body/div[2]/main/div[2]/div[3]/section/div/div[1]/section[2]/div[2]/ul"
+    DRIVER.execute_script("arguments[0].scrollIntoView(true);", moreMoviesButton)
+    time.sleep(randomSleep())
+    moreMoviesButton.click()
 
     time.sleep(randomSleep())
     movieTable = DRIVER.find_elements("class name","find-title-result")
@@ -135,6 +134,7 @@ def goToReviews():
     
     for button in buttons:
         text=button.text.split("\n")
+
         if text[0] == "User reviews":
             DRIVER.execute_script("arguments[0].scrollIntoView(true);", button)
             time.sleep(randomSleep())
@@ -142,6 +142,7 @@ def goToReviews():
             if button.is_displayed():
                 button.click()
                 time.sleep(5)
+
             else:
                 DRIVER.execute_script("arguments[0].scrollIntoView(true);", button)
                 button.click()
@@ -152,12 +153,12 @@ def goToReviews():
                 DRIVER.execute_script("arguments[0].scrollIntoView(true);", allReviewsButton)
                 time.sleep(5)
                 allReviewsButton.click()
-                # TODO: time.sleep(120)
+                time.sleep(120)
+
             except:
                 print("All reviews option not available.")
             
-            getReviews()
-            # TODO: showSpoilers()
+            showSpoilers()
             break
 
 '''
@@ -172,6 +173,7 @@ def showSpoilers():
         DRIVER.execute_script("arguments[0].scrollIntoView(true);", spoiler)
         time.sleep(randomSleep())
         spoiler.click()
+
     getReviews()
     
 '''
@@ -181,19 +183,23 @@ def showSpoilers():
 try-except block.
 '''
 def getReviews():
+    
     reviews = DRIVER.find_elements("class name","user-review-item")
     
     for review in reviews:
         tempElem = []
-        DRIVER.execute_script("arguments[0].scrollIntoView(true);", review)
+        
         try:
             tempElem.append(review.find_element("class name","review-rating").text)
             tempElem.append(review.find_element("class name","ipc-html-content-inner-div").text)
             cleanedReviews.append(cleanElements(tempElem))
-            time.sleep(randomSleep())
+            
+            if cleanedReviews:
+                print("got " + str(cleanedReviews.__len__()) + " reviews")
+        
         except:
-            pass
-
+            print("review could not be pulled")
+        
 '''
     This method cleand the text of the reviews, assings binary values to the 
 scores and adds quotation marks to the strings. 
@@ -207,6 +213,7 @@ def cleanElements(elements):
     
     if int(score[0])>5:
         cleans.append('"'+ str(1) +'"')
+    
     else:
         cleans.append('"'+ str(0) +'"')    
     
@@ -219,12 +226,13 @@ respective binary values to the file.
 def writeToCVS():
     with open("reviews/reviews.csv","a+",newline="") as file:
         writer = csv.writer(file)
+    
         for row in cleanedReviews:
             writer.writerow(row)
+    
     file.close()
     
 goToPage()
 writeToCVS()
-print("uou")
-
+print("The program has pulled " + str(cleanedReviews.__len__()) + " reviews.")
 DRIVER.quit()
